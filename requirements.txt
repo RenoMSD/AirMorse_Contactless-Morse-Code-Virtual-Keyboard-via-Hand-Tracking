@@ -1,0 +1,8 @@
+# Python 3.12. This machine has no 3.11 install, and MediaPipe 1.1 publishes 3.12 wheels.
+mediapipe==1.1.0
+opencv-python==5.0.0.93
+numpy==2.5.4
+PyQt6==6.11.0
+pynput==1.8.2
+pygame==2.6.1
+pytest==9.1.1
