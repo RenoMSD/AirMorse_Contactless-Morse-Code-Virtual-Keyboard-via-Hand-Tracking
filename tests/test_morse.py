@@ -95,3 +95,11 @@ def test_clearing_the_buffer_cancels_commit():
     engine.on_finger(PINKY_TIP, 0.1)
     assert engine.buffer == ""
     assert engine.poll(5.0) == []
+
+
+def test_commit_remaining_counts_down():
+    engine = MorseEngine(tau_commit=0.8)
+    assert engine.commit_remaining(0.0) is None
+    engine.on_finger(INDEX_TIP, 1.0)
+    assert abs(engine.commit_remaining(1.3) - 0.5) < 1e-9
+    assert engine.commit_remaining(5.0) == 0.0

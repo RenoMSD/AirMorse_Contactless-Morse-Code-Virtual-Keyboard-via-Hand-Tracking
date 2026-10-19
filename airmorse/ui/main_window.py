@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 import numpy as np
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import QSize, Qt, QTimer
 from PyQt6.QtGui import QFont, QImage, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QPushButton,
     QScrollArea,
     QSizePolicy,
     QSlider,
@@ -35,6 +36,10 @@ from airmorse.gesture.morse import (
 )
 from airmorse.gesture.pinch import (
     FINGER_NAMES,
+    INDEX_TIP,
+    MIDDLE_TIP,
+    PINKY_TIP,
+    RING_TIP,
     TAU_PINCH_MAX,
     TAU_PINCH_MIN,
     TIP_IDS,
@@ -42,6 +47,7 @@ from airmorse.gesture.pinch import (
 from airmorse.output.audio import AudioFeedback
 from airmorse.output.injector import KeyInjector
 from airmorse.ui.keyboard import KeyboardHud
+from airmorse.ui.mini import MiniView
 from airmorse.vision.camera import CameraWorker
 from airmorse.vision.model_asset import model_path
 
@@ -51,6 +57,15 @@ HINT_OFF = (
     "Index–thumb dot, middle–thumb dash, ring–thumb space, pinky–thumb delete. "
     "A letter is sent after you pause."
 )
+PREVIEW_PLACEHOLDER = "Decoded text appears here"
+MINI_IDLE_OPACITY = 0.8
+FULL_SIZE = QSize(1180, 800)
+FINGER_ACTIONS = {
+    INDEX_TIP: "Index + Thumb (Dot)",
+    MIDDLE_TIP: "Middle + Thumb (Dash)",
+    RING_TIP: "Ring + Thumb (Space)",
+    PINKY_TIP: "Pinky + Thumb (Delete)",
+}
 HINT_ON = (
     "Key sending is on. Click Notepad or a browser so it stays focused. "
     "AirMorse will not type into itself."
@@ -101,6 +116,15 @@ QCheckBox::indicator {
 }
 QCheckBox::indicator:checked { background: #3dd68c; border-color: #3dd68c; }
 QScrollArea { border: none; background: #121418; }
+QPushButton, QToolButton {
+    background: #232a36;
+    border: 1px solid #3a4454;
+    border-radius: 5px;
+    padding: 3px 10px;
+    color: #e8eef7;
+}
+QPushButton:hover, QToolButton:hover { border-color: #3dd68c; }
+QToolButton:checked { background: #1f3a2c; border-color: #3dd68c; }
 """
 
 
@@ -148,9 +172,11 @@ class MainWindow(QMainWindow):
         self._config_file = Path(config_file) if config_file else config_path()
         self._config = load_config(self._config_file)
         self._rgb = None
+        self._compact = False
+        self._full_size = QSize(FULL_SIZE)
 
         self.setWindowTitle("AirMorse")
-        self.resize(1180, 800)
+        self.resize(FULL_SIZE)
         self.setStyleSheet(STYLESHEET)
         if self._config.always_on_top:
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
@@ -162,6 +188,7 @@ class MainWindow(QMainWindow):
         self.audio = AudioFeedback()
 
         self._build()
+        self._refresh_text()
         self._refresh_hint()
         if not self.audio.available:
             self.camera_label.setText("Audio is off. Gestures still decode on screen.")
@@ -178,11 +205,21 @@ class MainWindow(QMainWindow):
         self.worker.frame_ready.connect(self._on_frame)
         if start_camera:
             self.worker.start()
+        if self._config.compact_mode:
+            self.set_compact(True)
 
     def _build(self) -> None:
         central = QWidget()
         self.setCentralWidget(central)
-        root = QHBoxLayout(central)
+        pages = QVBoxLayout(central)
+        pages.setContentsMargins(0, 0, 0, 0)
+        self.full_page = QWidget()
+        self.mini = MiniView()
+        self.mini.setVisible(False)
+        pages.addWidget(self.full_page)
+        pages.addWidget(self.mini)
+
+        root = QHBoxLayout(self.full_page)
         root.setContentsMargins(16, 16, 16, 16)
         root.setSpacing(16)
 
@@ -195,7 +232,7 @@ class MainWindow(QMainWindow):
         self.video.setMinimumSize(520, 390)
         self.video.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.keyboard = KeyboardHud()
-        self.preview = QLabel("Decoded text appears here")
+        self.preview = QLabel(PREVIEW_PLACEHOLDER)
         self.preview.setObjectName("preview")
         self.preview.setWordWrap(True)
         self.preview.setMinimumHeight(52)
@@ -208,6 +245,12 @@ class MainWindow(QMainWindow):
         right.setSpacing(8)
         title = QLabel("AirMorse")
         title.setObjectName("title")
+        self.compact_button = QPushButton("⤡ Mini")
+        self.compact_button.setToolTip("Switch to the compact view")
+        title_row = QHBoxLayout()
+        title_row.addWidget(title)
+        title_row.addStretch(1)
+        title_row.addWidget(self.compact_button)
         subtitle = QLabel("Contactless Morse keyboard")
         subtitle.setObjectName("muted")
         self.fps_label = QLabel("— FPS")
@@ -259,7 +302,7 @@ class MainWindow(QMainWindow):
         scroll.setWidget(_cheat_sheet())
         scroll.setMinimumHeight(160)
 
-        right.addWidget(title)
+        right.addLayout(title_row)
         right.addWidget(subtitle)
         right.addWidget(self.fps_label)
         right.addWidget(self.buffer_label)
@@ -290,6 +333,74 @@ class MainWindow(QMainWindow):
         self.inject_box.toggled.connect(self._on_inject)
         self.top_box.toggled.connect(self._on_top)
 
+        mini = self.mini
+        for source, mirror in ((self.pinch_slider, mini.pinch_slider), (self.commit_slider, mini.commit_slider)):
+            mirror.setRange(source.minimum(), source.maximum())
+            mirror.setValue(source.value())
+            mirror.valueChanged.connect(source.setValue)
+            source.valueChanged.connect(mirror.setValue)
+            mirror.sliderReleased.connect(self._save_config)
+        mini.pinch_value.setText(self.pinch_value.text())
+        mini.commit_value.setText(self.commit_value.text())
+        self.compact_button.clicked.connect(lambda: self.set_compact(True))
+        mini.expand_button.clicked.connect(lambda: self.set_compact(False))
+        mini.copy_button.clicked.connect(self._copy_text)
+        mini.clear_button.clicked.connect(self._clear_text)
+        mini.chart_toggle.clicked.connect(self._toggle_chart)
+        mini.settings_button.toggled.connect(lambda _: self._fit_compact())
+
+    @property
+    def compact(self) -> bool:
+        return self._compact
+
+    def set_compact(self, compact: bool) -> None:
+        if compact == self._compact:
+            return
+        if self.isMaximized() or self.isFullScreen():
+            self.showNormal()
+        if compact:
+            self._full_size = self.size()
+        self._compact = compact
+        self.full_page.setVisible(not compact)
+        self.mini.setVisible(compact)
+        self.setWindowTitle("AirMorse Mini" if compact else "AirMorse")
+        self._apply_opacity(hovered=self.underMouse())
+        if compact:
+            self._fit_compact()
+        else:
+            self.resize(self._full_size)
+        self._update_video()
+        self._save_config()
+
+    def _fit_compact(self) -> None:
+        if not self._compact:
+            return
+        for layout in (self.mini.layout(), self.centralWidget().layout(), self.layout()):
+            layout.activate()
+        self.resize(self.minimumSizeHint())
+
+    def _toggle_chart(self) -> None:
+        self.mini.set_chart_open(not self.mini.chart_open)
+        self._fit_compact()
+
+    def _apply_opacity(self, hovered: bool) -> None:
+        self.setWindowOpacity(1.0 if hovered or not self._compact else MINI_IDLE_OPACITY)
+
+    def enterEvent(self, event) -> None:
+        super().enterEvent(event)
+        self._apply_opacity(hovered=True)
+
+    def leaveEvent(self, event) -> None:
+        super().leaveEvent(event)
+        self._apply_opacity(hovered=False)
+
+    def _copy_text(self) -> None:
+        QApplication.clipboard().setText(self.engine.preview)
+
+    def _clear_text(self) -> None:
+        self.engine.preview = ""
+        self._refresh_text()
+
     def _labeled_row(self, caption: str, value: QLabel) -> QHBoxLayout:
         row = QHBoxLayout()
         name = QLabel(caption)
@@ -305,10 +416,12 @@ class MainWindow(QMainWindow):
         tau = value / 100
         self.settings.set_tau_pinch(tau)
         self.pinch_value.setText(f"{self.settings.snapshot()[0]:.2f}")
+        self.mini.pinch_value.setText(self.pinch_value.text())
 
     def _on_commit_changed(self, value: int) -> None:
         self.engine.tau_commit = value / 100
         self.commit_value.setText(f"{self.engine.tau_commit:.2f}s")
+        self.mini.commit_value.setText(self.commit_value.text())
 
     def _on_inject(self, checked: bool) -> None:
         self.injector.enabled = checked
@@ -341,17 +454,26 @@ class MainWindow(QMainWindow):
             return
         self._show_packet(packet)
         for finger, stamp in packet.token_times:
+            if finger in FINGER_ACTIONS:
+                self.mini.pinch_label.setText(FINGER_ACTIONS[finger])
             self._dispatch(self.engine.on_finger(finger, stamp))
         self._dispatch(self.engine.poll(time.monotonic()))
 
     def _poll_commit(self) -> None:
         if self._closing:
             return
-        self._dispatch(self.engine.poll(time.monotonic()))
+        now = time.monotonic()
+        self._dispatch(self.engine.poll(now))
+        self.mini.set_commit_countdown(self.engine.commit_remaining(now), self.engine.tau_commit)
 
     def _show_packet(self, packet) -> None:
         if packet.fps > 0:
             self.fps_label.setText(f"{packet.fps:.0f} FPS")
+        self.mini.set_fps(packet.fps)
+        if not packet.distances:
+            self.mini.pinch_label.setText("No hand")
+        elif self.mini.pinch_label.text() == "No hand":
+            self.mini.pinch_label.setText("Hand ready")
         self.distance_label.setText(_format_distances(packet.distances, packet.highlight_finger))
         if packet.message:
             self.camera_label.setText(packet.message)
@@ -361,21 +483,24 @@ class MainWindow(QMainWindow):
         if packet.frame_rgb is None:
             if packet.message:
                 self.video.setText(packet.message)
+                self.mini.video.setText(packet.message)
             return
         self.video.setText("")
+        self.mini.video.setText("")
         self._rgb = packet.frame_rgb
         self._update_video()
 
     def _update_video(self) -> None:
-        if self._rgb is None or self.video.width() < 2 or self.video.height() < 2:
+        video = self.mini.video if self._compact else self.video
+        if self._rgb is None or video.width() < 2 or video.height() < 2:
             return
         pixmap = rgb_to_pixmap(self._rgb)
         scaled = pixmap.scaled(
-            self.video.size(),
+            video.size(),
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.FastTransformation,
         )
-        self.video.setPixmap(scaled)
+        video.setPixmap(scaled)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -397,10 +522,15 @@ class MainWindow(QMainWindow):
                 self.keyboard.flash(" ")
             elif event.kind == "error":
                 self._show_error(event.value)
-        self.preview.setText(self.engine.preview or "Decoded text appears here")
-        self.buffer_label.setText(self.engine.buffer or "—")
+        self._refresh_text()
         if blocked:
             self.hint.setText("Focus Notepad or a browser. AirMorse does not type into itself.")
+
+    def _refresh_text(self) -> None:
+        self.preview.setText(self.engine.preview or PREVIEW_PLACEHOLDER)
+        self.buffer_label.setText(self.engine.buffer or "—")
+        self.mini.output.setText(self.engine.preview)
+        self.mini.set_buffer(self.engine.buffer)
 
     def _show_error(self, sequence: str) -> None:
         self.error_label.setText(f"Unknown sequence {sequence}")
@@ -418,6 +548,7 @@ class MainWindow(QMainWindow):
                     inject_keys=self.inject_box.isChecked(),
                     always_on_top=self.top_box.isChecked(),
                     camera_index=self._config.camera_index,
+                    compact_mode=self._compact,
                 ),
             )
         except OSError:

@@ -4,7 +4,7 @@ from airmorse.gesture.pinch import TAU_PINCH_MAX
 
 def test_roundtrip(tmp_path):
     path = tmp_path / "config.json"
-    original = AppConfig(tau_pinch=0.22, tau_commit=1.1, inject_keys=True, always_on_top=True, camera_index=2)
+    original = AppConfig(tau_pinch=0.22, tau_commit=1.1, inject_keys=True, always_on_top=True, camera_index=2, compact_mode=True)
     save_config(path, original)
     loaded = load_config(path)
     assert loaded.tau_pinch == 0.22
@@ -12,6 +12,7 @@ def test_roundtrip(tmp_path):
     assert loaded.inject_keys is True
     assert loaded.always_on_top is True
     assert loaded.camera_index == 2
+    assert loaded.compact_mode is True
 
 
 def test_out_of_range_values_are_clamped(tmp_path):

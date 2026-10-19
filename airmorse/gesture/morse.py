@@ -102,6 +102,12 @@ class MorseEngine:
             return []
         return self._commit()
 
+    def commit_remaining(self, now: float) -> float | None:
+        """Seconds until the pending buffer auto-commits, or None when nothing is pending."""
+        if not self.buffer or self._last_symbol_t is None:
+            return None
+        return max(0.0, self.tau_commit - (now - self._last_symbol_t))
+
     def _push(self, symbol: str, now: float) -> list[MorseEvent]:
         self.buffer += symbol
         self._last_symbol_t = now

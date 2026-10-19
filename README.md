@@ -11,6 +11,7 @@ AirMorse là bàn phím Morse không tiếp xúc: ứng dụng dùng webcam và 
 - Phát âm báo cho dấu chấm, dấu gạch, thao tác nhập và chuỗi Morse không hợp lệ (nếu thiết bị âm thanh hoạt động).
 - Hiển thị bàn phím ảo, ký tự đang nhập và bảng tra mã Morse.
 - Tùy chọn ghim cửa sổ lên trên và gửi kết quả vào cửa sổ khác.
+- Chế độ thu nhỏ (**⤡ Mini**): camera 120×90, bộ đệm Morse kèm đếm ngược, nút Copy/Del, bảng tra 5 cột tự làm sáng các chữ khớp với chuỗi đang gõ; có thể gấp bảng tra và mở cài đặt bằng nút ⚙. Cửa sổ mờ 80% khi không rê chuột vào. Bấm **⤢** để trở lại giao diện đầy đủ.
 - Lưu tùy chọn vào `config.json` trong thư mục dự án.
 
 ## Yêu cầu
