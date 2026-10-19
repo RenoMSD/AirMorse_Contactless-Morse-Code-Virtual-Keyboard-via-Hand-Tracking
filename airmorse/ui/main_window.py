@@ -34,7 +34,11 @@ from airmorse.gesture.morse import (
     MorseEvent,
 )
 from airmorse.gesture.pinch import (
-    FINGER_NAMES,
+    ENTER,
+    INDEX_TIP,
+    MIDDLE_TIP,
+    PINKY_TIP,
+    RING_TIP,
     TAU_PINCH_MAX,
     TAU_PINCH_MIN,
     TIP_IDS,
@@ -48,13 +52,21 @@ from airmorse.vision.model_asset import model_path
 logger = logging.getLogger(__name__)
 
 HINT_OFF = (
-    "Index–thumb dot, middle–thumb dash, ring–thumb space, pinky–thumb delete. "
-    "A letter is sent after you pause."
+    "Ngón trỏ–cái: chấm. Ngón giữa–cái: gạch. Ngón áp út–cái: cách. Ngón út–cái: xóa. "
+    "Ngón trỏ và ngón giữa cùng lúc: Enter. Một chữ được gửi sau khi bạn dừng."
 )
 HINT_ON = (
-    "Key sending is on. Click Notepad or a browser so it stays focused. "
-    "AirMorse will not type into itself."
+    "Đang gửi phím. Hãy bấm vào Notepad hoặc trình duyệt để cửa sổ đó được chọn. "
+    "AirMorse không gõ vào chính nó."
 )
+AUDIO_OFF = "Tắt âm thanh. Cử chỉ vẫn được giải mã trên màn hình."
+HINT_PAUSED = "Đang tạm dừng, chưa ghi chữ. Bật Ghi nhận chữ khi bạn muốn nhập."
+FINGER_LABELS = {
+    INDEX_TIP: "trỏ",
+    MIDDLE_TIP: "giữa",
+    RING_TIP: "áp út",
+    PINKY_TIP: "út",
+}
 
 STYLESHEET = """
 QMainWindow, QWidget {
@@ -82,7 +94,6 @@ QLabel#preview {
 }
 QLabel#video { background: #050608; color: #93a0b5; }
 QLabel#legend {
-    font-family: Consolas, "Courier New", monospace;
     color: #c5d0e0;
 }
 QSlider::groove:horizontal { height: 4px; background: #2c3340; border-radius: 2px; }
@@ -131,13 +142,16 @@ def _cheat_sheet() -> QWidget:
 
 def _format_distances(distances: dict[int, float], highlight: int | None) -> str:
     if not distances:
-        return "No hand"
+        return "Không thấy tay"
     parts = []
     for finger_id in TIP_IDS:
         if finger_id not in distances:
             continue
-        mark = " *" if finger_id == highlight else ""
-        parts.append(f"{FINGER_NAMES[finger_id]} {distances[finger_id]:.2f}{mark}")
+        marked = finger_id == highlight or (
+            highlight == ENTER and finger_id in (INDEX_TIP, MIDDLE_TIP)
+        )
+        mark = " *" if marked else ""
+        parts.append(f"{FINGER_LABELS[finger_id]} {distances[finger_id]:.2f}{mark}")
     return "  ".join(parts)
 
 
@@ -155,7 +169,7 @@ class MainWindow(QMainWindow):
         if self._config.always_on_top:
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
 
-        self.engine = MorseEngine(self._config.tau_commit)
+        self.engine = MorseEngine(self._config.tau_commit, uppercase=self._config.uppercase)
         self.settings = SharedSettings(self._config)
         self.injector = KeyInjector(is_blocked=self._window_is_foreground)
         self.injector.enabled = self._config.inject_keys
@@ -164,7 +178,7 @@ class MainWindow(QMainWindow):
         self._build()
         self._refresh_hint()
         if not self.audio.available:
-            self.camera_label.setText("Audio is off. Gestures still decode on screen.")
+            self.camera_label.setText(AUDIO_OFF)
 
         self._commit_timer = QTimer(self)
         self._commit_timer.setInterval(50)
@@ -188,14 +202,15 @@ class MainWindow(QMainWindow):
 
         left = QVBoxLayout()
         left.setSpacing(10)
-        self.video = QLabel("Starting camera…")
+        self.video = QLabel("Đang mở camera…")
         self.video.setObjectName("video")
         self.video.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.video.setWordWrap(True)
         self.video.setMinimumSize(520, 390)
         self.video.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.keyboard = KeyboardHud()
-        self.preview = QLabel("Decoded text appears here")
+        self.keyboard.set_uppercase(self._config.uppercase)
+        self.preview = QLabel("Chữ đã giải mã hiện ở đây")
         self.preview.setObjectName("preview")
         self.preview.setWordWrap(True)
         self.preview.setMinimumHeight(52)
@@ -208,9 +223,11 @@ class MainWindow(QMainWindow):
         right.setSpacing(8)
         title = QLabel("AirMorse")
         title.setObjectName("title")
-        subtitle = QLabel("Contactless Morse keyboard")
+        subtitle = QLabel("Bàn phím Morse không chạm")
         subtitle.setObjectName("muted")
-        self.fps_label = QLabel("— FPS")
+        self.capture_box = QCheckBox("Ghi nhận chữ")
+        self.capture_box.setChecked(False)
+        self.fps_label = QLabel("— khung/giây")
         self.fps_label.setObjectName("muted")
         self.buffer_label = QLabel("—")
         self.buffer_label.setObjectName("buffer")
@@ -219,14 +236,15 @@ class MainWindow(QMainWindow):
         self.error_label.setObjectName("error")
         self.error_label.setWordWrap(True)
         self.error_label.setMinimumHeight(18)
-        self.distance_label = QLabel("No hand")
+        self.distance_label = QLabel("Không thấy tay")
         self.distance_label.setObjectName("muted")
         self.distance_label.setWordWrap(True)
         legend = QLabel(
-            "Index + thumb    dot\n"
-            "Middle + thumb   dash\n"
-            "Ring + thumb     space\n"
-            "Pinky + thumb    delete"
+            "Ngón trỏ + ngón cái: chấm\n"
+            "Ngón giữa + ngón cái: gạch\n"
+            "Ngón trỏ + ngón giữa cùng lúc: Enter\n"
+            "Ngón áp út + ngón cái: cách\n"
+            "Ngón út + ngón cái: xóa"
         )
         legend.setObjectName("legend")
 
@@ -234,16 +252,18 @@ class MainWindow(QMainWindow):
         self.pinch_slider = QSlider(Qt.Orientation.Horizontal)
         self.pinch_slider.setRange(int(round(TAU_PINCH_MIN * 100)), int(round(TAU_PINCH_MAX * 100)))
         self.pinch_slider.setValue(int(round(self._config.tau_pinch * 100)))
-        self.pinch_slider.setAccessibleName("Pinch threshold")
-        self.commit_value = QLabel(f"{self.engine.tau_commit:.2f}s")
+        self.pinch_slider.setAccessibleName("Ngưỡng chụm")
+        self.commit_value = QLabel(f"{self.engine.tau_commit:.2f} giây")
         self.commit_slider = QSlider(Qt.Orientation.Horizontal)
         self.commit_slider.setRange(int(round(TAU_COMMIT_MIN * 100)), int(round(TAU_COMMIT_MAX * 100)))
         self.commit_slider.setValue(int(round(self.engine.tau_commit * 100)))
-        self.commit_slider.setAccessibleName("Commit delay")
+        self.commit_slider.setAccessibleName("Thời gian chờ")
 
-        self.inject_box = QCheckBox("Send keys to the focused window")
+        self.case_box = QCheckBox("In hoa")
+        self.case_box.setChecked(self._config.uppercase)
+        self.inject_box = QCheckBox("Gửi phím vào cửa sổ đang chọn")
         self.inject_box.setChecked(self._config.inject_keys)
-        self.top_box = QCheckBox("Keep this window on top")
+        self.top_box = QCheckBox("Ghim cửa sổ này lên trên")
         self.top_box.setChecked(self._config.always_on_top)
         self.hint = QLabel(HINT_OFF)
         self.hint.setObjectName("hint")
@@ -252,7 +272,7 @@ class MainWindow(QMainWindow):
         self.camera_label.setObjectName("camera")
         self.camera_label.setWordWrap(True)
 
-        chart_title = QLabel("Morse chart")
+        chart_title = QLabel("Bảng mã Morse")
         chart_title.setObjectName("muted")
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -261,15 +281,17 @@ class MainWindow(QMainWindow):
 
         right.addWidget(title)
         right.addWidget(subtitle)
+        right.addWidget(self.capture_box)
         right.addWidget(self.fps_label)
         right.addWidget(self.buffer_label)
         right.addWidget(self.error_label)
         right.addWidget(self.distance_label)
         right.addWidget(legend)
-        right.addLayout(self._labeled_row("Pinch threshold", self.pinch_value))
+        right.addLayout(self._labeled_row("Ngưỡng chụm", self.pinch_value))
         right.addWidget(self.pinch_slider)
-        right.addLayout(self._labeled_row("Commit delay", self.commit_value))
+        right.addLayout(self._labeled_row("Thời gian chờ", self.commit_value))
         right.addWidget(self.commit_slider)
+        right.addWidget(self.case_box)
         right.addWidget(self.inject_box)
         right.addWidget(self.top_box)
         right.addWidget(self.hint)
@@ -279,7 +301,7 @@ class MainWindow(QMainWindow):
 
         side = QWidget()
         side.setLayout(right)
-        side.setMinimumWidth(300)
+        side.setMinimumWidth(360)
         root.addLayout(left, stretch=3)
         root.addWidget(side, stretch=2)
 
@@ -287,6 +309,8 @@ class MainWindow(QMainWindow):
         self.commit_slider.valueChanged.connect(self._on_commit_changed)
         self.pinch_slider.sliderReleased.connect(self._save_config)
         self.commit_slider.sliderReleased.connect(self._save_config)
+        self.capture_box.toggled.connect(self._on_capture)
+        self.case_box.toggled.connect(self._on_case)
         self.inject_box.toggled.connect(self._on_inject)
         self.top_box.toggled.connect(self._on_top)
 
@@ -294,7 +318,7 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout()
         name = QLabel(caption)
         name.setObjectName("muted")
-        value.setMinimumWidth(52)
+        value.setMinimumWidth(72)
         value.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         row.addWidget(name)
         row.addStretch(1)
@@ -308,7 +332,19 @@ class MainWindow(QMainWindow):
 
     def _on_commit_changed(self, value: int) -> None:
         self.engine.tau_commit = value / 100
-        self.commit_value.setText(f"{self.engine.tau_commit:.2f}s")
+        self.commit_value.setText(f"{self.engine.tau_commit:.2f} giây")
+
+    def _on_capture(self, checked: bool) -> None:
+        if not checked:
+            self.engine.cancel_pending()
+            self.buffer_label.setText("—")
+            self.error_label.setText("")
+        self._refresh_hint()
+
+    def _on_case(self, checked: bool) -> None:
+        self.engine.uppercase = checked
+        self.keyboard.set_uppercase(checked)
+        self._save_config()
 
     def _on_inject(self, checked: bool) -> None:
         self.injector.enabled = checked
@@ -321,7 +357,15 @@ class MainWindow(QMainWindow):
         self._save_config()
 
     def _refresh_hint(self) -> None:
+        if not self.capture_box.isChecked():
+            self.hint.setText(HINT_PAUSED)
+            return
         self.hint.setText(HINT_ON if self.injector.enabled else HINT_OFF)
+
+    def _ingest_finger(self, finger: int, stamp: float) -> None:
+        if not self.capture_box.isChecked():
+            return
+        self._dispatch(self.engine.on_finger(finger, stamp))
 
     def _window_is_foreground(self) -> bool:
         if sys.platform != "win32":
@@ -340,23 +384,25 @@ class MainWindow(QMainWindow):
         if packet is None or self._closing:
             return
         self._show_packet(packet)
+        if not self.capture_box.isChecked():
+            return
         for finger, stamp in packet.token_times:
-            self._dispatch(self.engine.on_finger(finger, stamp))
+            self._ingest_finger(finger, stamp)
         self._dispatch(self.engine.poll(time.monotonic()))
 
     def _poll_commit(self) -> None:
-        if self._closing:
+        if self._closing or not self.capture_box.isChecked():
             return
         self._dispatch(self.engine.poll(time.monotonic()))
 
     def _show_packet(self, packet) -> None:
         if packet.fps > 0:
-            self.fps_label.setText(f"{packet.fps:.0f} FPS")
+            self.fps_label.setText(f"{packet.fps:.0f} khung/giây")
         self.distance_label.setText(_format_distances(packet.distances, packet.highlight_finger))
         if packet.message:
             self.camera_label.setText(packet.message)
         elif packet.camera_ok:
-            note = "" if self.audio.available else "Audio is off. Gestures still decode on screen."
+            note = "" if self.audio.available else AUDIO_OFF
             self.camera_label.setText(note)
         if packet.frame_rgb is None:
             if packet.message:
@@ -388,22 +434,24 @@ class MainWindow(QMainWindow):
         for event in events:
             self.audio.play(event)
             sent = self.injector.apply(event)
-            if event.kind in {"char", "space", "backspace"} and self.injector.enabled and not sent:
+            if event.kind in {"char", "space", "backspace", "enter"} and self.injector.enabled and not sent:
                 blocked = True
             if event.kind == "char":
                 self.keyboard.flash(event.value)
                 self.error_label.setText("")
             elif event.kind == "space":
                 self.keyboard.flash(" ")
+            elif event.kind == "enter":
+                self.keyboard.flash("\n")
             elif event.kind == "error":
                 self._show_error(event.value)
-        self.preview.setText(self.engine.preview or "Decoded text appears here")
+        self.preview.setText(self.engine.preview or "Chữ đã giải mã hiện ở đây")
         self.buffer_label.setText(self.engine.buffer or "—")
         if blocked:
-            self.hint.setText("Focus Notepad or a browser. AirMorse does not type into itself.")
+            self.hint.setText("Hãy chọn Notepad hoặc trình duyệt. AirMorse không gõ vào chính nó.")
 
     def _show_error(self, sequence: str) -> None:
-        self.error_label.setText(f"Unknown sequence {sequence}")
+        self.error_label.setText(f"Chuỗi không hợp lệ {sequence}")
         self._error_timer.start(1200)
 
     def _save_config(self) -> None:
@@ -417,6 +465,7 @@ class MainWindow(QMainWindow):
                     tau_commit=self.engine.tau_commit,
                     inject_keys=self.inject_box.isChecked(),
                     always_on_top=self.top_box.isChecked(),
+                    uppercase=self.case_box.isChecked(),
                     camera_index=self._config.camera_index,
                 ),
             )

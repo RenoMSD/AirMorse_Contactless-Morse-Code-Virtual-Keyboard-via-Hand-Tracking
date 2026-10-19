@@ -3,6 +3,8 @@
 import cv2
 import numpy as np
 
+from airmorse.gesture.pinch import ENTER, INDEX_TIP, MIDDLE_TIP
+
 # MediaPipe hand connections. Finger groups include the palm link so a pinch
 # lights the whole digit.
 HAND_CONNECTIONS = (
@@ -43,10 +45,15 @@ def draw_hand(frame_rgb: np.ndarray, points, highlight_finger: int | None) -> No
 
     for start, end in HAND_CONNECTIONS:
         cv2.line(frame_rgb, xy(start), xy(end), WHITE, 2, cv2.LINE_AA)
-    edges = FINGER_EDGES.get(highlight_finger or -1, ())
+    if highlight_finger == ENTER:
+        edges = FINGER_EDGES[INDEX_TIP] + FINGER_EDGES[MIDDLE_TIP]
+        highlighted = {INDEX_TIP, MIDDLE_TIP}
+    else:
+        edges = FINGER_EDGES.get(highlight_finger if highlight_finger is not None else -1, ())
+        highlighted = {highlight_finger} if highlight_finger is not None else set()
     for start, end in edges:
         cv2.line(frame_rgb, xy(start), xy(end), GREEN, 4, cv2.LINE_AA)
     for index in range(21):
-        color = GREEN if index == highlight_finger else WHITE
-        radius = 6 if index == highlight_finger else 3
+        color = GREEN if index in highlighted else WHITE
+        radius = 6 if index in highlighted else 3
         cv2.circle(frame_rgb, xy(index), radius, color, -1, cv2.LINE_AA)

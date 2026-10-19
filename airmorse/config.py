@@ -38,6 +38,7 @@ class AppConfig:
     tau_commit: float = TAU_COMMIT_DEFAULT
     inject_keys: bool = False
     always_on_top: bool = False
+    uppercase: bool = True
     camera_index: int = 0
 
     def clamped(self) -> "AppConfig":
@@ -47,6 +48,7 @@ class AppConfig:
             tau_commit=_finite_float(self.tau_commit, TAU_COMMIT_MIN, TAU_COMMIT_MAX, TAU_COMMIT_DEFAULT),
             inject_keys=self.inject_keys if isinstance(self.inject_keys, bool) else False,
             always_on_top=self.always_on_top if isinstance(self.always_on_top, bool) else False,
+            uppercase=self.uppercase if isinstance(self.uppercase, bool) else True,
             camera_index=max(0, int(self.camera_index)),
         )
 

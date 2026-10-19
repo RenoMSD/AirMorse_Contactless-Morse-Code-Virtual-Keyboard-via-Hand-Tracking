@@ -1,5 +1,5 @@
 from airmorse.gesture.fsm import PINCHED, RELEASED, GestureFSM
-from airmorse.gesture.pinch import classify_pinch
+from airmorse.gesture.pinch import ENTER, INDEX_TIP, classify_pinch
 from tests.support import synthetic_hand
 
 
@@ -42,6 +42,21 @@ def test_cooldown_blocks_a_second_tap():
     assert fsm.state == PINCHED
     assert fsm.update(released, 0.12) is None
     assert fsm.update(engaged, 0.20) == 8
+
+
+def test_enter_hold_emits_once_and_a_leftover_finger_does_not():
+    fsm = GestureFSM(tau_pinch=0.18, cooldown_s=0.15)
+    both = classify_pinch(synthetic_hand(distances={8: 0.10, 12: 0.11, 16: 0.55, 20: 0.55}))
+    only_index = classify_pinch(synthetic_hand(8, 0.10, 0.55))
+    released = classify_pinch(synthetic_hand(None, 0.55, 0.55))
+    assert fsm.update(both, 0.0) == ENTER
+    assert fsm.update(both, 0.2) is None
+    assert fsm.state == PINCHED
+    assert fsm.update(only_index, 0.4) is None
+    assert fsm.active_finger == INDEX_TIP
+    assert fsm.update(released, 0.5) is None
+    assert fsm.state == RELEASED
+    assert fsm.update(only_index, 0.7) == INDEX_TIP
 
 
 def test_lost_hand_releases_without_a_token():

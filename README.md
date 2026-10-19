@@ -42,28 +42,31 @@ Tệp mô hình nhận diện bàn tay được cung cấp tại `models/hand_la
 ## Cách sử dụng
 
 1. Khởi chạy ứng dụng và cho phép ứng dụng truy cập webcam trong cài đặt quyền riêng tư của Windows nếu được yêu cầu.
-2. Đưa bàn tay vào vùng nhìn của webcam. Hình ảnh xem trước được lật ngang để thao tác thuận mắt hơn.
-3. Chụm đầu ngón tay tương ứng vào ngón cái rồi thả ra để nhập một lệnh:
+2. Bật **Ghi nhận chữ** khi bạn muốn nhập. Ứng dụng luôn mở ở trạng thái tắt, nên cử chỉ lúc mới khởi động không thành chữ. Tắt ô này bất cứ lúc nào để dừng ghi; chữ đã giải mã vẫn giữ nguyên, dấu đang nhập dở sẽ bị bỏ. Lựa chọn này không được lưu, nên lần mở sau vẫn bắt đầu ở trạng thái tắt.
+3. Đưa bàn tay vào vùng nhìn của webcam. Hình ảnh xem trước được lật ngang để thao tác thuận mắt hơn. Webcam và khung xương bàn tay vẫn chạy khi ghi nhận đang tắt.
+4. Chụm đầu ngón tay tương ứng vào ngón cái rồi thả ra để nhập một lệnh:
 
    | Ngón tay chụm với ngón cái | Lệnh |
    | --- | --- |
    | Ngón trỏ | Dấu chấm (`.`) |
    | Ngón giữa | Dấu gạch (`-`) |
+   | Ngón trỏ và ngón giữa cùng lúc | Enter (xuống dòng) |
    | Ngón áp út | Khoảng trắng |
    | Ngón út | Xóa |
 
-4. Ghép các dấu chấm và dấu gạch của một ký tự. AirMorse giải mã sau khi bạn ngừng nhập đủ lâu; mặc định là **0,8 giây** kể từ dấu Morse cuối cùng.
-5. Chọn **Send keys to the focused window** để gửi ký tự đã giải mã vào ứng dụng khác. Sau khi bật, hãy chọn Notepad, trình duyệt hoặc cửa sổ đích trước khi thực hiện thao tác. Trên Windows, AirMorse không gửi phím vào chính cửa sổ AirMorse.
+5. Ghép các dấu chấm và dấu gạch của một ký tự. AirMorse giải mã sau khi bạn ngừng nhập đủ lâu; mặc định là **0,8 giây** kể từ dấu Morse cuối cùng.
+6. Chọn **Gửi phím vào cửa sổ đang chọn** để gửi ký tự đã giải mã vào ứng dụng khác. Sau khi bật, hãy chọn Notepad, trình duyệt hoặc cửa sổ đích trước khi thực hiện thao tác. Trên Windows, AirMorse không gửi phím vào chính cửa sổ AirMorse.
 
 Ví dụ, nhập `...` bằng ba lần chụm ngón trỏ để tạo chữ **S**; đợi ký tự được giải mã rồi nhập `---` bằng ba lần chụm ngón giữa để tạo chữ **O**. Lặp lại `...` để có chuỗi **SOS**.
 
-Lệnh khoảng trắng sẽ kết thúc và giải mã chuỗi đang có trước khi thêm dấu cách. Nếu chuỗi không phải mã Morse hợp lệ, ứng dụng báo lỗi và không thêm dấu cách. Lệnh xóa sẽ bỏ dấu chấm/dấu gạch cuối cùng nếu ký tự vẫn đang được nhập; nếu bộ đệm trống, lệnh này xóa ký tự cuối trong phần văn bản đã giải mã.
+Lệnh khoảng trắng sẽ kết thúc và giải mã chuỗi đang có trước khi thêm dấu cách. Lệnh Enter làm tương tự rồi xuống dòng. Nếu chuỗi không phải mã Morse hợp lệ, ứng dụng báo lỗi và không thêm dấu cách hay xuống dòng. Lệnh xóa sẽ bỏ dấu chấm/dấu gạch cuối cùng nếu ký tự vẫn đang được nhập; nếu bộ đệm trống, lệnh này xóa ký tự cuối trong phần văn bản đã giải mã.
 
 ## Điều chỉnh
 
-- **Pinch threshold**: điều chỉnh độ gần cần thiết giữa ngón cái và đầu ngón tay để nhận diện pinch. Giá trị lớn hơn dễ kích hoạt hơn; giá trị nhỏ hơn yêu cầu chụm sát hơn. Phạm vi: `0.08–0.40`; mặc định: `0.18`.
-- **Commit delay**: thời gian chờ sau dấu chấm/dấu gạch cuối để giải mã ký tự. Phạm vi: `0.5–1.5` giây; mặc định: `0.8` giây.
-- **Keep this window on top**: giữ cửa sổ AirMorse phía trên các cửa sổ khác.
+- **Ngưỡng chụm**: điều chỉnh độ gần cần thiết giữa ngón cái và đầu ngón tay để nhận diện thao tác chụm. Giá trị lớn hơn dễ kích hoạt hơn; giá trị nhỏ hơn yêu cầu chụm sát hơn. Phạm vi: `0.08–0.40`; mặc định: `0.18`.
+- **Thời gian chờ**: thời gian chờ sau dấu chấm/dấu gạch cuối để giải mã ký tự. Phạm vi: `0.5–1.5` giây; mặc định: `0.8` giây.
+- **In hoa**: bật để chữ cái mới ra in hoa, tắt để ra in thường. Chữ số không đổi. Chữ đã giải mã trước đó giữ nguyên, nên có thể đổi giữa chừng để trộn hoa và thường. Mặc định là bật.
+- **Ghim cửa sổ này lên trên**: giữ cửa sổ AirMorse phía trên các cửa sổ khác.
 
 Các tùy chọn được lưu trong `config.json` ở thư mục gốc dự án. Cấu hình mặc định dùng camera có chỉ số `0`; nếu hệ thống có nhiều camera, có thể đổi trường `camera_index` trong tệp cấu hình trước khi chạy lại ứng dụng.
 
@@ -97,9 +100,9 @@ main.py      Điểm khởi chạy
 ## Khắc phục sự cố
 
 - **Không thấy hình ảnh webcam**: kiểm tra kết nối webcam, quyền truy cập camera trong cài đặt quyền riêng tư của Windows, và đóng ứng dụng khác đang chiếm dụng camera. Ứng dụng mặc định mở camera số `0`.
-- **Không nhận diện pinch ổn định**: đưa cả bàn tay vào khung hình, tăng ánh sáng và điều chỉnh **Pinch threshold**. Ngưỡng cao hơn dễ nhận thao tác hơn nhưng cũng có thể làm tăng nhận diện nhầm.
+- **Không nhận diện thao tác chụm ổn định**: đưa cả bàn tay vào khung hình, tăng ánh sáng và điều chỉnh **Ngưỡng chụm**. Ngưỡng cao hơn dễ nhận thao tác hơn nhưng cũng có thể làm tăng nhận diện nhầm.
 - **Không nghe âm báo**: kiểm tra đầu ra âm thanh. Tính năng âm báo là tùy chọn; văn bản vẫn giải mã trên màn hình khi âm thanh không khả dụng.
-- **Không nhập được vào ứng dụng khác**: bật **Send keys to the focused window**, rồi chuyển tiêu điểm sang cửa sổ đích. AirMorse không gửi các dấu Morse đang đệm hoặc chuỗi không hợp lệ; chỉ ký tự đã giải mã, khoảng trắng và thao tác xóa mới được gửi.
+- **Không nhập được vào ứng dụng khác**: bật **Gửi phím vào cửa sổ đang chọn**, rồi chuyển sang cửa sổ đích. AirMorse không gửi các dấu Morse đang đệm hoặc chuỗi không hợp lệ; chỉ ký tự đã giải mã, khoảng trắng và thao tác xóa mới được gửi.
 - **Không tải/khởi tạo được bộ nhận diện bàn tay**: kiểm tra tệp `models/hand_landmarker.task`; nếu cần tải lại, kết nối Internet và chạy lại ứng dụng.
 
 ## Quyền riêng tư

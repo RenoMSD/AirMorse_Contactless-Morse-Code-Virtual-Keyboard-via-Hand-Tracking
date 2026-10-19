@@ -16,20 +16,30 @@ class KeyboardHud(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._active = ""
+        self._uppercase = True
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._clear)
         self.setMinimumHeight(200)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setAccessibleName("Virtual keyboard")
+        self.setAccessibleName("Bàn phím ảo")
 
     def sizeHint(self) -> QSize:
         return QSize(640, 200)
+
+    def set_uppercase(self, uppercase: bool) -> None:
+        self._uppercase = uppercase
+        self.update()
 
     def flash(self, character: str) -> None:
         self._active = " " if character == " " else character.upper()
         self.update()
         self._timer.start(400)
+
+    def _label(self, character: str) -> str:
+        if character.isalpha() and not self._uppercase:
+            return character.lower()
+        return character
 
     def _clear(self) -> None:
         self._active = ""
@@ -55,18 +65,26 @@ class KeyboardHud(QWidget):
                 self._draw_key(
                     painter,
                     QRectF(x, y, key_w, key_h),
-                    character,
+                    self._label(character),
                     character == self._active,
                 )
                 x += key_w + gap
             y += key_h + gap
-        space_w = key_w * 5 + gap * 4
-        space_x = max(gap, (width - space_w) // 2)
+        enter_w = key_w * 2 + gap
+        space_w = key_w * 4 + gap * 3
+        row_w = space_w + gap + enter_w
+        space_x = max(gap, (width - row_w) // 2)
         self._draw_key(
             painter,
             QRectF(space_x, y, space_w, key_h),
-            "space",
+            "dấu cách",
             self._active == " ",
+        )
+        self._draw_key(
+            painter,
+            QRectF(space_x + space_w + gap, y, enter_w, key_h),
+            "Enter",
+            self._active == "\n",
         )
         painter.end()
 

@@ -15,6 +15,9 @@ class FakeKeys:
     def tap_backspace(self) -> None:
         self.events.append(("backspace",))
 
+    def tap_enter(self) -> None:
+        self.events.append(("enter",))
+
 
 def test_disabled_injector_types_nothing():
     fake = FakeKeys()
@@ -33,7 +36,8 @@ def test_enabled_injector_sends_only_commit_keys():
     assert injector.apply(MorseEvent("pop", ".")) is False
     assert injector.apply(MorseEvent("error", "......")) is False
     assert injector.apply(MorseEvent("symbol", ".")) is False
-    assert fake.events == [("type", "A"), ("space",), ("backspace",)]
+    assert injector.apply(MorseEvent("enter", "\n")) is True
+    assert fake.events == [("type", "A"), ("space",), ("backspace",), ("enter",)]
 
 
 def test_injector_refuses_to_type_into_itself():
@@ -44,10 +48,20 @@ def test_injector_refuses_to_type_into_itself():
     assert fake.events == []
 
 
+def test_injector_types_lowercase_letters_and_digits():
+    fake = FakeKeys()
+    injector = KeyInjector(backend=fake)
+    injector.enabled = True
+    assert injector.apply(MorseEvent("char", "a")) is True
+    assert injector.apply(MorseEvent("char", "5")) is True
+    assert fake.events == [("type", "a"), ("type", "5")]
+
+
 def test_injector_rejects_characters_outside_the_morse_alphabet():
     fake = FakeKeys()
     injector = KeyInjector(backend=fake)
     injector.enabled = True
-    assert injector.apply(MorseEvent("char", "a")) is False
     assert injector.apply(MorseEvent("char", "Hello")) is False
+    assert injector.apply(MorseEvent("char", "á")) is False
+    assert injector.apply(MorseEvent("char", "")) is False
     assert fake.events == []

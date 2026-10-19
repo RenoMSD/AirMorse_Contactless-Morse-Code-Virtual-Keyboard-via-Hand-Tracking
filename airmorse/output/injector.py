@@ -8,6 +8,18 @@ from airmorse.gesture.morse import DECODED_CHARS, MorseEvent
 logger = logging.getLogger(__name__)
 
 
+def _typeable(value: str) -> str | None:
+    """One Morse letter or digit. Letters keep the case the decoder chose."""
+    if len(value) != 1:
+        return None
+    upper = value.upper()
+    if upper not in DECODED_CHARS:
+        return None
+    if upper.isalpha():
+        return value if value in (upper, upper.lower()) else None
+    return upper
+
+
 class PynputBackend:
     def __init__(self) -> None:
         from pynput.keyboard import Controller, Key
@@ -26,9 +38,13 @@ class PynputBackend:
         self._keyboard.press(self._key.backspace)
         self._keyboard.release(self._key.backspace)
 
+    def tap_enter(self) -> None:
+        self._keyboard.press(self._key.enter)
+        self._keyboard.release(self._key.enter)
+
 
 class KeyInjector:
-    """Types A-Z, digits, space, and backspace into the focused window."""
+    """Types A-Z, digits, space, enter, and backspace into the focused window."""
 
     def __init__(
         self,
@@ -52,15 +68,19 @@ class KeyInjector:
             return False
         try:
             if event.kind == "char":
-                if event.value not in DECODED_CHARS:
+                text = _typeable(event.value)
+                if text is None:
                     return False
-                self._backend().type_text(event.value)
+                self._backend().type_text(text)
                 return True
             if event.kind == "space":
                 self._backend().tap_space()
                 return True
             if event.kind == "backspace":
                 self._backend().tap_backspace()
+                return True
+            if event.kind == "enter":
+                self._backend().tap_enter()
                 return True
         except Exception:
             logger.exception("key injection failed")

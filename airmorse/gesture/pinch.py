@@ -12,6 +12,8 @@ MIDDLE_TIP = 12
 RING_TIP = 16
 PINKY_TIP = 20
 TIP_IDS = (INDEX_TIP, MIDDLE_TIP, RING_TIP, PINKY_TIP)
+# Not a landmark. Both index and middle pinched together.
+ENTER = -1
 
 TAU_PINCH_DEFAULT = 0.18
 TAU_PINCH_MIN = 0.08
@@ -43,11 +45,13 @@ def classify_pinch(
     tau_pinch: float = TAU_PINCH_DEFAULT,
     delta: float = DELTA_DEFAULT,
 ) -> PinchResult:
-    """Choose the pinched fingertip.
+    """Choose the pinched fingertip, or Enter when index and middle pinch together.
 
     Lref is the palm scale ||P0 - P9||. Each fingertip distance is
     di = ||Pi - P4|| / Lref. The closest tip wins only when it is inside
-    tau_pinch and at least delta closer than every other tip.
+    tau_pinch and at least delta closer than every other tip. If that test
+    has no winner, index and middle are both inside tau_pinch, and the other
+    two tips are outside it, the gesture is Enter.
     """
     pts = np.asarray(points, dtype=np.float64)
     if pts.ndim != 2 or pts.shape[0] < 21 or pts.shape[1] < 2:
@@ -72,5 +76,15 @@ def classify_pinch(
     others = [value for finger_id, value in distances.items() if finger_id != closest]
     if not others:
         return PinchResult(None, distances, lref, closest)
-    valid = winner < tau_pinch and winner + delta < min(others)
-    return PinchResult(closest if valid else None, distances, lref, closest)
+    single = closest if winner < tau_pinch and winner + delta < min(others) else None
+    index_distance = distances[INDEX_TIP]
+    middle_distance = distances[MIDDLE_TIP]
+    enter = (
+        single is None
+        and index_distance < tau_pinch
+        and middle_distance < tau_pinch
+        and distances[RING_TIP] >= tau_pinch
+        and distances[PINKY_TIP] >= tau_pinch
+    )
+    finger = ENTER if enter else single
+    return PinchResult(finger, distances, lref, closest)

@@ -75,14 +75,14 @@ class CameraWorker(QThread):
             self._loop()
         except Exception as exc:
             logger.exception("camera worker failed")
-            self._emit(FramePacket(message=f"Vision stopped: {exc}"))
+            self._emit(FramePacket(message=f"Thị giác đã dừng: {exc}"))
 
     def _emit(self, packet: FramePacket) -> None:
         if self.frames.publish(packet):
             self.frame_ready.emit()
 
     def _loop(self) -> None:
-        self._emit(FramePacket(message="Loading hand model…"))
+        self._emit(FramePacket(message="Đang tải mô hình bàn tay…"))
         if self._stop.is_set():
             return
         model = ensure_model(self.model_file)
@@ -93,7 +93,7 @@ class CameraWorker(QThread):
             if capture is None:
                 self._emit(
                     FramePacket(
-                        message="Could not open the webcam. Check Windows camera privacy settings."
+                        message="Không mở được webcam. Kiểm tra quyền camera trong Cài đặt Windows."
                     )
                 )
                 while not self._stop.wait(1.0):
@@ -110,7 +110,7 @@ class CameraWorker(QThread):
             fps = 0.0
             while not self._stop.is_set():
                 if capture is None:
-                    self._emit(FramePacket(message="Waiting for the webcam…", fps=fps))
+                    self._emit(FramePacket(message="Đang chờ webcam…", fps=fps))
                     if self._stop.wait(1.0):
                         break
                     capture = open_capture(self.camera_index)
@@ -121,7 +121,7 @@ class CameraWorker(QThread):
                     ok, frame = False, None
                 if not ok or frame is None:
                     misses += 1
-                    self._emit(FramePacket(message="Waiting for the webcam…", fps=fps))
+                    self._emit(FramePacket(message="Đang chờ webcam…", fps=fps))
                     if misses >= 15:
                         capture.release()
                         capture = open_capture(self.camera_index)
@@ -165,7 +165,7 @@ class CameraWorker(QThread):
                     if not self._tracker_logged:
                         logger.exception("hand tracker failed")
                         self._tracker_logged = True
-                    message = "Hand tracker error. Video is still running."
+                    message = "Lỗi nhận diện bàn tay. Hình vẫn đang chạy."
 
                 tau, delta = self.settings.snapshot()
                 fsm.tau_pinch = tau

@@ -1,6 +1,14 @@
 """Rising-edge pinch detector with hysteresis and a cooldown."""
 
-from airmorse.gesture.pinch import COOLDOWN_S, RELEASE_RATIO, TAU_PINCH_DEFAULT, PinchResult
+from airmorse.gesture.pinch import (
+    COOLDOWN_S,
+    ENTER,
+    INDEX_TIP,
+    MIDDLE_TIP,
+    RELEASE_RATIO,
+    TAU_PINCH_DEFAULT,
+    PinchResult,
+)
 
 RELEASED = "RELEASED"
 PINCHED = "PINCHED"
@@ -22,12 +30,13 @@ class GestureFSM:
 
     def update(self, pinch: PinchResult | None, now: float) -> int | None:
         if self.state == PINCHED:
-            distance = None
-            if pinch is not None and self.active_finger is not None:
-                distance = pinch.distances.get(self.active_finger)
-            if distance is None or distance > self.tau_pinch * RELEASE_RATIO:
-                self.state = RELEASED
-                self.active_finger = None
+            if not self._gesture_held(pinch):
+                leftover = self._leftover_finger(pinch) if self.active_finger == ENTER else None
+                if leftover is not None:
+                    self.active_finger = leftover
+                else:
+                    self.state = RELEASED
+                    self.active_finger = None
             return None
 
         if pinch is None or pinch.finger is None:
@@ -39,3 +48,38 @@ class GestureFSM:
             return None
         self._last_emit_t = now
         return pinch.finger
+
+    def _limit(self) -> float:
+        return self.tau_pinch * RELEASE_RATIO
+
+    def _distance(self, pinch: PinchResult | None, finger: int | None) -> float | None:
+        if pinch is None or finger is None:
+            return None
+        return pinch.distances.get(finger)
+
+    def _gesture_held(self, pinch: PinchResult | None) -> bool:
+        limit = self._limit()
+        if self.active_finger == ENTER:
+            index_distance = self._distance(pinch, INDEX_TIP)
+            middle_distance = self._distance(pinch, MIDDLE_TIP)
+            return (
+                index_distance is not None
+                and middle_distance is not None
+                and index_distance <= limit
+                and middle_distance <= limit
+            )
+        distance = self._distance(pinch, self.active_finger)
+        return distance is not None and distance <= limit
+
+    def _leftover_finger(self, pinch: PinchResult | None) -> int | None:
+        if pinch is None:
+            return None
+        limit = self._limit()
+        held = []
+        for finger in (INDEX_TIP, MIDDLE_TIP):
+            distance = pinch.distances.get(finger)
+            if distance is not None and distance <= limit:
+                held.append(finger)
+        if len(held) == 1:
+            return held[0]
+        return None

@@ -4,6 +4,7 @@ import pytest
 from airmorse.gesture.pinch import (
     COOLDOWN_S,
     DELTA_DEFAULT,
+    ENTER,
     RELEASE_RATIO,
     TAU_PINCH_DEFAULT,
     classify_pinch,
@@ -37,8 +38,18 @@ def test_single_finger_wins():
     assert result.finger == 8
 
 
+def test_index_and_middle_together_are_enter():
+    both = synthetic_hand(distances={8: 0.10, 12: 0.12, 16: 0.55, 20: 0.55})
+    assert classify_pinch(both).finger == ENTER
+
+
+def test_a_clear_index_pinch_still_beats_a_looser_middle():
+    points = synthetic_hand(distances={8: 0.08, 12: 0.17, 16: 0.55, 20: 0.55})
+    assert classify_pinch(points).finger == 8
+
+
 def test_coflexion_margin_rejects_near_neighbor():
-    crowded = synthetic_hand(distances={8: 0.10, 12: 0.16, 16: 0.55, 20: 0.55})
+    crowded = synthetic_hand(distances={8: 0.10, 12: 0.55, 16: 0.16, 20: 0.55})
     clear = synthetic_hand(distances={8: 0.10, 12: 0.20, 16: 0.55, 20: 0.55})
     assert classify_pinch(crowded).finger is None
     assert classify_pinch(clear).finger == 8

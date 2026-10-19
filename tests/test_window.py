@@ -43,7 +43,70 @@ def test_unknown_sequence_warns_without_text(app, tmp_path):
         clock += 0.05
     window._dispatch(window.engine.poll(clock + 1))
     assert window.engine.preview == ""
-    assert window.error_label.text() == "Unknown sequence ......"
+    assert window.error_label.text() == "Chuỗi không hợp lệ ......"
+    window.close()
+    window.deleteLater()
+    app.processEvents()
+
+
+def test_capture_starts_off_and_ignores_gestures(app, tmp_path):
+    from airmorse.gesture.pinch import INDEX_TIP
+    from airmorse.ui.main_window import MainWindow
+
+    window = MainWindow(start_camera=False, config_file=tmp_path / "config.json")
+    assert window.capture_box.isChecked() is False
+    window._ingest_finger(INDEX_TIP, 0.0)
+    assert window.engine.buffer == ""
+    assert window.engine.preview == ""
+
+    window.capture_box.setChecked(True)
+    window._ingest_finger(INDEX_TIP, 1.0)
+    assert window.engine.buffer == "."
+
+    window.capture_box.setChecked(False)
+    assert window.engine.buffer == ""
+    assert window.engine.preview == ""
+    window._ingest_finger(INDEX_TIP, 2.0)
+    window._poll_commit()
+    assert window.engine.preview == ""
+    window.close()
+    window.deleteLater()
+    app.processEvents()
+
+
+def test_enter_adds_a_newline_and_flashes_the_key(app, tmp_path):
+    from airmorse.gesture.pinch import ENTER, INDEX_TIP
+    from airmorse.ui.main_window import MainWindow
+
+    window = MainWindow(start_camera=False, config_file=tmp_path / "config.json")
+    window._dispatch(window.engine.on_finger(INDEX_TIP, 0.0))
+    window._dispatch(window.engine.on_finger(ENTER, 0.1))
+    assert window.preview.text() == "E\n"
+    assert window.keyboard._active == "\n"
+    assert window.engine.buffer == ""
+    window.close()
+    window.deleteLater()
+    app.processEvents()
+
+
+def test_lowercase_toggle_changes_new_letters_only(app, tmp_path):
+    from airmorse.gesture.pinch import INDEX_TIP
+    from airmorse.ui.main_window import MainWindow
+
+    window = MainWindow(start_camera=False, config_file=tmp_path / "config.json")
+    window.capture_box.setChecked(True)
+    assert window.case_box.isChecked() is True
+    window._dispatch(window.engine.on_finger(INDEX_TIP, 0.0))
+    window._dispatch(window.engine.poll(0.8))
+    assert window.preview.text() == "E"
+
+    window.case_box.setChecked(False)
+    assert window.keyboard._uppercase is False
+    assert window.preview.text() == "E"
+    window._dispatch(window.engine.on_finger(INDEX_TIP, 2.0))
+    window._dispatch(window.engine.poll(3.0))
+    assert window.preview.text() == "Ee"
+    assert window.keyboard._active == "E"
     window.close()
     window.deleteLater()
     app.processEvents()
