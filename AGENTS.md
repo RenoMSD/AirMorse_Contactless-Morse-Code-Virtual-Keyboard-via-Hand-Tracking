@@ -14,11 +14,11 @@ Mọi agent làm việc trên repo này PHẢI tuân theo quy trình dưới đ�
 ## Quy trình
 
 1. Nhiệm vụ nằm trong `.agents/TASKS.md`. Chỉ nhận nhiệm vụ có `owner` là tên của bạn và `status: todo`.
-2. Khi bắt đầu: đổi `status` thành `doing`, tạo nhánh `agent/<owner>/<task-id>` từ `main`.
+2. Bắt đầu: `.\scripts\agents.ps1 start <owner> <task-id>` (tạo nhánh `agent/<owner>/<task-id>` từ `origin/main`).
 3. Chỉ sửa các tệp nằm trong phạm vi `files` của nhiệm vụ. Cần sửa thêm tệp khác → ghi vào handoff, không tự mở rộng.
-4. Trước khi bàn giao, chạy `pytest` và đảm bảo tất cả đều qua.
-5. Commit, push nhánh, rồi viết `.agents/handoffs/<task-id>.md` theo mẫu `.agents/handoffs/_TEMPLATE.md`.
-6. Đổi `status` thành `review`. Claude Code sẽ review, rồi chuyển sang `done` hoặc `changes` kèm nhận xét.
+4. Viết `.agents/handoffs/<task-id>.md` theo mẫu `.agents/handoffs/_TEMPLATE.md`.
+5. Bàn giao: `.\scripts\agents.ps1 finish <owner> <task-id>` (chạy `pytest`, commit, push). Không bàn giao khi test lỗi.
+6. KHÔNG sửa `.agents/TASKS.md` trên nhánh của bạn (tránh xung đột). Chỉ Claude Code cập nhật trạng thái sau khi review.
 
 ## Tiết kiệm token
 
