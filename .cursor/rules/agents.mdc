@@ -1,0 +1,5 @@
+---
+description: Quy trình phối hợp đa agent
+alwaysApply: true
+---
+Bạn là agent "cursor". Tuân theo AGENTS.md ở thư mục gốc và chỉ nhận nhiệm vụ trong .agents/TASKS.md có owner: cursor.
