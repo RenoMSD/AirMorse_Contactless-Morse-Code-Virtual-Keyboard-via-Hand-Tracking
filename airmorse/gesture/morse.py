@@ -50,6 +50,15 @@ MORSE: dict[str, str] = {
 
 CHAR_TO_MORSE = {character: code for code, character in MORSE.items()}
 DECODED_CHARS = frozenset(CHAR_TO_MORSE)
+# Radio prosign AA. It is not a letter or digit in the table above.
+NEWLINE_CODE = ".-.-"
+
+
+def format_morse_signal(sequence: str) -> str:
+    """Format raw '.' and '-' symbols into spaced '·' and '—' for UI display."""
+    if not sequence:
+        return "—"
+    return " ".join("·" if ch == "." else ("—" if ch == "-" else ch) for ch in sequence)
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,6 +94,28 @@ class MorseEngine:
     @tau_commit.setter
     def tau_commit(self, value: float) -> None:
         self._tau_commit = min(TAU_COMMIT_MAX, max(TAU_COMMIT_MIN, float(value)))
+
+    def pending_char(self) -> str:
+        """Return the character that the current buffer would commit to, or '' if empty."""
+        if not self.buffer:
+            return ""
+        if self.buffer == NEWLINE_CODE:
+            return "↵"
+        ch = MORSE.get(self.buffer)
+        if ch is None:
+            return "?"
+        if ch.isalpha() and not self.uppercase:
+            return ch.lower()
+        return ch
+
+    def commit_progress(self, now: float) -> tuple[float, float]:
+        """Return (remaining_seconds, progress_ratio_0_to_1) for the pending buffer."""
+        if not self.buffer or self._last_symbol_t is None or self._tau_commit <= 0:
+            return 0.0, 0.0
+        elapsed = max(0.0, now - self._last_symbol_t)
+        remaining = max(0.0, self._tau_commit - elapsed)
+        ratio = min(1.0, elapsed / self._tau_commit)
+        return remaining, ratio
 
     def on_finger(self, finger: int, now: float) -> list[MorseEvent]:
         if finger == INDEX_TIP:
@@ -122,6 +153,9 @@ class MorseEngine:
         self._last_symbol_t = None
         if not sequence:
             return []
+        if sequence == NEWLINE_CODE:
+            self.preview += "\n"
+            return [MorseEvent("enter", "\n")]
         character = MORSE.get(sequence)
         if character is None:
             return [MorseEvent("error", sequence)]
@@ -134,7 +168,7 @@ class MorseEngine:
         events: list[MorseEvent] = []
         if self.buffer:
             events.extend(self._commit())
-            if events and events[-1].kind == "error":
+            if events and events[-1].kind in {"error", "enter"}:
                 return events
         self.preview += " "
         events.append(MorseEvent("space", " "))
@@ -144,7 +178,7 @@ class MorseEngine:
         events: list[MorseEvent] = []
         if self.buffer:
             events.extend(self._commit())
-            if events and events[-1].kind == "error":
+            if events and events[-1].kind in {"error", "enter"}:
                 return events
         self.preview += "\n"
         events.append(MorseEvent("enter", "\n"))

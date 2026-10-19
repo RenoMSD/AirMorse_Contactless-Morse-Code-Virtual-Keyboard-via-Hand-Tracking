@@ -53,6 +53,30 @@ def test_commit_waits_for_the_timeout():
     assert engine.poll(0.80) == [MorseEvent("char", "E")]
 
 
+def _push_code(engine: MorseEngine, code: str, start: float = 0.0) -> float:
+    clock = start
+    for symbol in code:
+        finger = INDEX_TIP if symbol == "." else MIDDLE_TIP
+        engine.on_finger(finger, clock)
+        clock += 0.05
+    return clock
+
+
+def test_newline_prosign_commits_after_a_pause():
+    engine = MorseEngine(tau_commit=0.5)
+    clock = _push_code(engine, ".-.-")
+    assert engine.poll(clock + 0.5) == [MorseEvent("enter", "\n")]
+    assert engine.preview == "\n"
+    assert engine.buffer == ""
+
+
+def test_space_on_the_newline_prosign_does_not_add_a_space():
+    engine = MorseEngine()
+    clock = _push_code(engine, ".-.-")
+    assert engine.on_finger(RING_TIP, clock) == [MorseEvent("enter", "\n")]
+    assert engine.preview == "\n"
+
+
 def test_unknown_sequence_is_discarded():
     engine = MorseEngine(tau_commit=0.5)
     clock = 0.0

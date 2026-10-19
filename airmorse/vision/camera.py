@@ -14,7 +14,8 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 from airmorse.config import SharedSettings
 from airmorse.gesture.fsm import GestureFSM
-from airmorse.gesture.pinch import classify_pinch
+from airmorse.gesture.pinch import THUMB_TIP, classify_pinch
+from airmorse.gesture.thumb import ThumbGesture, classify_thumb
 from airmorse.vision.frames import FramePacket, LatestFrame
 from airmorse.vision.hands import landmarks_to_frame, letterbox_rgb
 from airmorse.vision.model_asset import ensure_model
@@ -104,6 +105,7 @@ class CameraWorker(QThread):
                 return
 
             fsm = GestureFSM()
+            thumb_gesture = ThumbGesture()
             misses = 0
             last_timestamp = -1
             previous_tick = None
@@ -172,18 +174,28 @@ class CameraWorker(QThread):
                 pinch = classify_pinch(points, tau, delta) if points is not None else None
                 now = time.monotonic()
                 token = fsm.update(pinch, now)
+                thumb = thumb_gesture.update(
+                    classify_thumb(points) if points is not None else None,
+                    now,
+                )
+                tokens = []
+                if thumb is not None:
+                    tokens.append((thumb, now))
+                if token is not None:
+                    tokens.append((token, now))
+                highlight = THUMB_TIP if thumb_gesture.pose is not None else fsm.active_finger
                 if points is not None:
-                    draw_hand(rgb, points, fsm.active_finger)
+                    draw_hand(rgb, points, highlight)
                 self._emit(
                     FramePacket(
                         frame_rgb=np.ascontiguousarray(rgb).copy(),
                         fps=fps,
-                        token_times=[(token, now)] if token is not None else [],
+                        token_times=tokens,
                         hand_present=points is not None,
                         camera_ok=True,
                         message=message,
                         distances=dict(pinch.distances) if pinch is not None else {},
-                        highlight_finger=fsm.active_finger,
+                        highlight_finger=highlight,
                     )
                 )
         finally:

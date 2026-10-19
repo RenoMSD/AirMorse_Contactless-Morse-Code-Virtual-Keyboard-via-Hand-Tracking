@@ -74,6 +74,27 @@ def test_capture_starts_off_and_ignores_gestures(app, tmp_path):
     app.processEvents()
 
 
+def test_thumbs_up_starts_capture_and_thumbs_down_stops_it(app, tmp_path):
+    from airmorse.gesture.pinch import INDEX_TIP
+    from airmorse.gesture.thumb import THUMB_DOWN, THUMB_UP
+    from airmorse.ui.main_window import MainWindow
+
+    window = MainWindow(start_camera=False, config_file=tmp_path / "config.json")
+    window._handle_tokens([(THUMB_UP, 0.0)])
+    assert window.capture_box.isChecked() is True
+    assert window.engine.preview == ""
+
+    window._dispatch(window.engine.on_finger(INDEX_TIP, 1.0))
+    assert window.engine.buffer == "."
+    window._handle_tokens([(THUMB_DOWN, 2.0), (INDEX_TIP, 2.0)])
+    assert window.capture_box.isChecked() is False
+    assert window.engine.buffer == ""
+    assert window.engine.preview == ""
+    window.close()
+    window.deleteLater()
+    app.processEvents()
+
+
 def test_enter_adds_a_newline_and_flashes_the_key(app, tmp_path):
     from airmorse.gesture.pinch import ENTER, INDEX_TIP
     from airmorse.ui.main_window import MainWindow
@@ -84,6 +105,24 @@ def test_enter_adds_a_newline_and_flashes_the_key(app, tmp_path):
     assert window.preview.text() == "E\n"
     assert window.keyboard._active == "\n"
     assert window.engine.buffer == ""
+    window.close()
+    window.deleteLater()
+    app.processEvents()
+
+
+def test_newline_prosign_flashes_enter(app, tmp_path):
+    from airmorse.gesture.pinch import INDEX_TIP, MIDDLE_TIP
+    from airmorse.ui.main_window import MainWindow
+
+    window = MainWindow(start_camera=False, config_file=tmp_path / "config.json")
+    clock = 0.0
+    for symbol in ".-.-":
+        finger = INDEX_TIP if symbol == "." else MIDDLE_TIP
+        window._dispatch(window.engine.on_finger(finger, clock))
+        clock += 0.05
+    window._dispatch(window.engine.poll(clock + 0.8))
+    assert window.preview.text() == "\n"
+    assert window.keyboard._active == "\n"
     window.close()
     window.deleteLater()
     app.processEvents()

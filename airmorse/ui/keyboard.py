@@ -48,16 +48,16 @@ class KeyboardHud(QWidget):
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.fillRect(self.rect(), QColor("#121418"))
+        painter.fillRect(self.rect(), QColor("#181E29"))
         font = QFont("Segoe UI", 10)
         font.setWeight(QFont.Weight.DemiBold)
         painter.setFont(font)
 
         width = self.width()
         gap = 6
-        key_h = 32
+        key_h = 30
         key_w = int(min(56, max(28, (width - gap * 11) / 10)))
-        y = 8
+        y = 6
         for row in ROWS:
             row_w = len(row) * key_w + (len(row) - 1) * gap
             x = max(gap, (width - row_w) // 2)
@@ -70,33 +70,41 @@ class KeyboardHud(QWidget):
                 )
                 x += key_w + gap
             y += key_h + gap
-        enter_w = key_w * 2 + gap
+        enter_w = key_w * 2.5 + gap
         space_w = key_w * 4 + gap * 3
-        row_w = space_w + gap + enter_w
+        row_w = space_w + gap * 2 + enter_w
         space_x = max(gap, (width - row_w) // 2)
         self._draw_key(
             painter,
             QRectF(space_x, y, space_w, key_h),
-            "dấu cách",
+            "Dấu cách",
             self._active == " ",
         )
         self._draw_key(
             painter,
-            QRectF(space_x + space_w + gap, y, enter_w, key_h),
-            "Enter",
+            QRectF(space_x + space_w + gap * 2, y, enter_w, key_h),
+            "Xuống dòng",
             self._active == "\n",
+            accent_color="#7C4DFF",
         )
         painter.end()
 
-    def _draw_key(self, painter: QPainter, rect: QRectF, label: str, active: bool) -> None:
+    def _draw_key(
+        self,
+        painter: QPainter,
+        rect: QRectF,
+        label: str,
+        active: bool,
+        accent_color: str = "#00E676",
+    ) -> None:
         if active:
-            painter.setBrush(QColor("#3dd68c"))
+            painter.setBrush(QColor(accent_color))
             painter.setPen(Qt.PenStyle.NoPen)
-            text = QColor("#102117")
+            text = QColor("#0E121A" if accent_color == "#00E676" else "#FFFFFF")
         else:
-            painter.setBrush(QColor("#232a36"))
-            painter.setPen(QPen(QColor("#3a4454"), 1))
-            text = QColor("#e8eef7")
+            painter.setBrush(QColor("#0E121A"))
+            painter.setPen(QPen(QColor("#263043"), 1))
+            text = QColor("#FFFFFF")
         painter.drawRoundedRect(rect, 6, 6)
         painter.setPen(text)
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, label)

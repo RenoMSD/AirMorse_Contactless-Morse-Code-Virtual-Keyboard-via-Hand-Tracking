@@ -42,7 +42,7 @@ Tệp mô hình nhận diện bàn tay được cung cấp tại `models/hand_la
 ## Cách sử dụng
 
 1. Khởi chạy ứng dụng và cho phép ứng dụng truy cập webcam trong cài đặt quyền riêng tư của Windows nếu được yêu cầu.
-2. Bật **Ghi nhận chữ** khi bạn muốn nhập. Ứng dụng luôn mở ở trạng thái tắt, nên cử chỉ lúc mới khởi động không thành chữ. Tắt ô này bất cứ lúc nào để dừng ghi; chữ đã giải mã vẫn giữ nguyên, dấu đang nhập dở sẽ bị bỏ. Lựa chọn này không được lưu, nên lần mở sau vẫn bắt đầu ở trạng thái tắt.
+2. Bật **Ghi nhận chữ** khi bạn muốn nhập. Cũng có thể giơ **ngón cái lên** (like) và giữ khoảng một nhịp để bật, rồi **úp ngón cái xuống** để tắt. Bốn ngón còn lại cần nắm lại. Ứng dụng luôn mở ở trạng thái tắt, nên cử chỉ lúc mới khởi động không thành chữ. Tắt bằng ô này hoặc bằng like úp xuống sẽ giữ chữ đã giải mã và bỏ dấu đang nhập dở. Lựa chọn này không được lưu, nên lần mở sau vẫn bắt đầu ở trạng thái tắt.
 3. Đưa bàn tay vào vùng nhìn của webcam. Hình ảnh xem trước được lật ngang để thao tác thuận mắt hơn. Webcam và khung xương bàn tay vẫn chạy khi ghi nhận đang tắt.
 4. Chụm đầu ngón tay tương ứng vào ngón cái rồi thả ra để nhập một lệnh:
 
@@ -59,7 +59,7 @@ Tệp mô hình nhận diện bàn tay được cung cấp tại `models/hand_la
 
 Ví dụ, nhập `...` bằng ba lần chụm ngón trỏ để tạo chữ **S**; đợi ký tự được giải mã rồi nhập `---` bằng ba lần chụm ngón giữa để tạo chữ **O**. Lặp lại `...` để có chuỗi **SOS**.
 
-Lệnh khoảng trắng sẽ kết thúc và giải mã chuỗi đang có trước khi thêm dấu cách. Lệnh Enter làm tương tự rồi xuống dòng. Nếu chuỗi không phải mã Morse hợp lệ, ứng dụng báo lỗi và không thêm dấu cách hay xuống dòng. Lệnh xóa sẽ bỏ dấu chấm/dấu gạch cuối cùng nếu ký tự vẫn đang được nhập; nếu bộ đệm trống, lệnh này xóa ký tự cuối trong phần văn bản đã giải mã.
+Lệnh khoảng trắng sẽ kết thúc và giải mã chuỗi đang có trước khi thêm dấu cách. Lệnh Enter làm tương tự rồi xuống dòng. Nhập `.-.-` rồi dừng cũng xuống dòng: đó là ký hiệu xuống dòng trong Morse vô tuyến và không trùng chữ A–Z hay số 0–9. Nếu chuỗi không phải mã Morse hợp lệ, ứng dụng báo lỗi và không thêm dấu cách hay xuống dòng. Lệnh xóa sẽ bỏ dấu chấm/dấu gạch cuối cùng nếu ký tự vẫn đang được nhập; nếu bộ đệm trống, lệnh này xóa ký tự cuối trong phần văn bản đã giải mã.
 
 ## Điều chỉnh
 
