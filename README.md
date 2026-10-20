@@ -50,7 +50,7 @@ Tệp mô hình nhận diện bàn tay được cung cấp tại `models/hand_la
    | --- | --- |
    | Ngón trỏ | Dấu chấm (`.`) |
    | Ngón giữa | Dấu gạch (`-`) |
-   | Ngón trỏ và ngón giữa cùng lúc | Enter (xuống dòng) |
+   | Ngón trỏ và ngón giữa cùng lúc | Enter (gửi tin nhắn trong ứng dụng chat) |
    | Ngón áp út | Khoảng trắng |
    | Ngón út | Xóa |
 
@@ -59,7 +59,7 @@ Tệp mô hình nhận diện bàn tay được cung cấp tại `models/hand_la
 
 Ví dụ, nhập `...` bằng ba lần chụm ngón trỏ để tạo chữ **S**; đợi ký tự được giải mã rồi nhập `---` bằng ba lần chụm ngón giữa để tạo chữ **O**. Lặp lại `...` để có chuỗi **SOS**.
 
-Lệnh khoảng trắng sẽ kết thúc và giải mã chuỗi đang có trước khi thêm dấu cách. Lệnh Enter làm tương tự rồi xuống dòng. Nhập `.-.-` rồi dừng cũng xuống dòng: đó là ký hiệu xuống dòng trong Morse vô tuyến và không trùng chữ A–Z hay số 0–9. Nếu chuỗi không phải mã Morse hợp lệ, ứng dụng báo lỗi và không thêm dấu cách hay xuống dòng. Lệnh xóa sẽ bỏ dấu chấm/dấu gạch cuối cùng nếu ký tự vẫn đang được nhập; nếu bộ đệm trống, lệnh này xóa ký tự cuối trong phần văn bản đã giải mã.
+Lệnh khoảng trắng sẽ kết thúc và giải mã chuỗi đang có trước khi thêm dấu cách. Lệnh Enter làm tương tự rồi nhấn phím Enter, nên trong Messenger, Zalo, Discord hay ChatGPT tin nhắn sẽ được gửi đi. Để chỉ xuống dòng mà không gửi, nhập `.-.-` rồi dừng: AirMorse nhấn Shift+Enter (Notepad, Word và các ô chat đều hiểu là xuống dòng). `.-.-` là ký hiệu xuống dòng trong Morse vô tuyến và không trùng chữ A–Z hay số 0–9. Nếu chuỗi không phải mã Morse hợp lệ, ứng dụng báo lỗi và không thêm dấu cách hay xuống dòng. Lệnh xóa sẽ bỏ dấu chấm/dấu gạch cuối cùng nếu ký tự vẫn đang được nhập; nếu bộ đệm trống, lệnh này xóa ký tự cuối trong phần văn bản đã giải mã.
 
 ## Điều chỉnh
 

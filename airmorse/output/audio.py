@@ -28,7 +28,7 @@ def sound_key(event: MorseEvent) -> str | None:
         return "dot"
     if event.kind == "symbol" and event.value == "-":
         return "dash"
-    if event.kind in {"char", "space", "enter", "pop", "backspace"}:
+    if event.kind in {"char", "space", "newline", "enter", "pop", "backspace"}:
         return "click"
     if event.kind == "error":
         return "error"

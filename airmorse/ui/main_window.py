@@ -70,7 +70,7 @@ logger = logging.getLogger(__name__)
 
 HINT_OFF = (
     "Ngón trỏ–cái: chấm. Ngón giữa–cái: gạch. Ngón áp út–cái: cách. Ngón út–cái: xóa. "
-    "Ngón trỏ và ngón giữa cùng lúc, hoặc chuỗi .-.- : xuống dòng. "
+    "Ngón trỏ và ngón giữa cùng lúc: Enter (gửi). Chuỗi .-.- : xuống dòng. "
     "Một chữ được gửi sau khi bạn dừng."
 )
 HINT_ON = (
@@ -247,7 +247,7 @@ def _gesture_guide_card() -> QFrame:
         ("[👎]", COLOR_MUTED, "Dislike: Tắt ghi"),
         ("[·]", COLOR_DOT, "Trỏ: Chấm (Dot)"),
         ("[—]", COLOR_DASH, "Giữa: Gạch (Dash)"),
-        ("[↲]", COLOR_ENTER, "Trỏ+Giữa: Xuống dòng"),
+        ("[↲]", COLOR_ENTER, "Trỏ+Giữa: Enter (gửi)"),
         ("[␣]", COLOR_ENTER, "Áp út: Dấu cách"),
         ("[⌫]", COLOR_DELETE, "Út: Xóa ký tự"),
         ("[.-.-]", COLOR_ENTER, "Chuỗi AA: Xuống dòng"),
@@ -883,14 +883,14 @@ class MainWindow(QMainWindow):
             self.audio.play(event)
             self.mini_widget.flash_edge_for_event(event.kind, event.value)
             sent = self.injector.apply(event)
-            if event.kind in {"char", "space", "backspace", "enter"} and self.injector.enabled and not sent:
+            if event.kind in {"char", "space", "backspace", "newline", "enter"} and self.injector.enabled and not sent:
                 blocked = True
             if event.kind == "char":
                 self.keyboard.flash(event.value)
                 self.error_label.setText("")
             elif event.kind == "space":
                 self.keyboard.flash(" ")
-            elif event.kind == "enter":
+            elif event.kind in {"newline", "enter"}:
                 self.keyboard.flash("\n")
             elif event.kind == "error":
                 self._show_error(event.value)

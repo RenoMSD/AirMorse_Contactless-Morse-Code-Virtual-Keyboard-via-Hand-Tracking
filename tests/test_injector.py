@@ -18,6 +18,9 @@ class FakeKeys:
     def tap_enter(self) -> None:
         self.events.append(("enter",))
 
+    def tap_newline(self) -> None:
+        self.events.append(("newline",))
+
 
 def test_disabled_injector_types_nothing():
     fake = FakeKeys()
@@ -36,8 +39,9 @@ def test_enabled_injector_sends_only_commit_keys():
     assert injector.apply(MorseEvent("pop", ".")) is False
     assert injector.apply(MorseEvent("error", "......")) is False
     assert injector.apply(MorseEvent("symbol", ".")) is False
+    assert injector.apply(MorseEvent("newline", "\n")) is True
     assert injector.apply(MorseEvent("enter", "\n")) is True
-    assert fake.events == [("type", "A"), ("space",), ("backspace",), ("enter",)]
+    assert fake.events == [("type", "A"), ("space",), ("backspace",), ("newline",), ("enter",)]
 
 
 def test_injector_refuses_to_type_into_itself():

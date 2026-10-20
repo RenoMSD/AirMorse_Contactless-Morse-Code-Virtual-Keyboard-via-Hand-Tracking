@@ -65,7 +65,7 @@ def _push_code(engine: MorseEngine, code: str, start: float = 0.0) -> float:
 def test_newline_prosign_commits_after_a_pause():
     engine = MorseEngine(tau_commit=0.5)
     clock = _push_code(engine, ".-.-")
-    assert engine.poll(clock + 0.5) == [MorseEvent("enter", "\n")]
+    assert engine.poll(clock + 0.5) == [MorseEvent("newline", "\n")]
     assert engine.preview == "\n"
     assert engine.buffer == ""
 
@@ -73,7 +73,7 @@ def test_newline_prosign_commits_after_a_pause():
 def test_space_on_the_newline_prosign_does_not_add_a_space():
     engine = MorseEngine()
     clock = _push_code(engine, ".-.-")
-    assert engine.on_finger(RING_TIP, clock) == [MorseEvent("enter", "\n")]
+    assert engine.on_finger(RING_TIP, clock) == [MorseEvent("newline", "\n")]
     assert engine.preview == "\n"
 
 
@@ -126,6 +126,14 @@ def test_enter_on_an_invalid_buffer_does_not_insert_a_newline():
     events = engine.on_finger(ENTER, clock)
     assert events == [MorseEvent("error", "......")]
     assert engine.preview == ""
+
+
+def test_enter_after_the_newline_prosign_still_sends():
+    engine = MorseEngine()
+    clock = _push_code(engine, ".-.-")
+    events = engine.on_finger(ENTER, clock)
+    assert events == [MorseEvent("newline", "\n"), MorseEvent("enter", "\n")]
+    assert engine.preview == "\n\n"
 
 
 def test_enter_on_an_empty_buffer():

@@ -83,7 +83,7 @@ class KeyboardHud(QWidget):
         self._draw_key(
             painter,
             QRectF(space_x + space_w + gap * 2, y, enter_w, key_h),
-            "Xuống dòng",
+            "Enter ↵",
             self._active == "\n",
             accent_color="#7C4DFF",
         )

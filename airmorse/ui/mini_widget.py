@@ -45,7 +45,7 @@ PINCH_DESCRIPTIONS: dict[int, tuple[str, str]] = {
     MIDDLE_TIP: ("Giữa + Cái (Gạch)", COLOR_DASH),
     RING_TIP: ("Áp út + Cái (Cách)", COLOR_ENTER),
     PINKY_TIP: ("Út + Cái (Xóa)", COLOR_DELETE),
-    ENTER: ("Trỏ + Giữa (Xuống dòng)", COLOR_ENTER),
+    ENTER: ("Trỏ + Giữa (Enter/Gửi)", COLOR_ENTER),
     THUMB_TIP: ("Ngón cái (Bật/Tắt)", COLOR_DASH),
 }
 
@@ -559,7 +559,7 @@ class MiniWidget(QWidget):
             color = COLOR_DOT if value == "." else COLOR_DASH
         elif kind == "char":
             color = COLOR_DASH
-        elif kind in {"space", "enter"}:
+        elif kind in {"space", "newline", "enter"}:
             color = COLOR_ENTER
         elif kind in {"backspace", "pop", "error"}:
             color = COLOR_DELETE

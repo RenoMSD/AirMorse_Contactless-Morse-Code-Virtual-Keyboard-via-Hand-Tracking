@@ -42,9 +42,15 @@ class PynputBackend:
         self._keyboard.press(self._key.enter)
         self._keyboard.release(self._key.enter)
 
+    def tap_newline(self) -> None:
+        # Shift+Enter breaks the line in chat boxes where a plain Enter would send.
+        with self._keyboard.pressed(self._key.shift):
+            self._keyboard.press(self._key.enter)
+            self._keyboard.release(self._key.enter)
+
 
 class KeyInjector:
-    """Types A-Z, digits, space, enter, and backspace into the focused window."""
+    """Types A-Z, digits, space, newline, enter, and backspace into the focused window."""
 
     def __init__(
         self,
@@ -78,6 +84,9 @@ class KeyInjector:
                 return True
             if event.kind == "backspace":
                 self._backend().tap_backspace()
+                return True
+            if event.kind == "newline":
+                self._backend().tap_newline()
                 return True
             if event.kind == "enter":
                 self._backend().tap_enter()

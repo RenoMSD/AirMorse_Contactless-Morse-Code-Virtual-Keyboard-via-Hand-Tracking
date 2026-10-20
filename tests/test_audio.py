@@ -25,6 +25,7 @@ def test_sound_keys():
     assert sound_key(MorseEvent("symbol", "-")) == "dash"
     assert sound_key(MorseEvent("char", "A")) == "click"
     assert sound_key(MorseEvent("space", " ")) == "click"
+    assert sound_key(MorseEvent("newline", "\n")) == "click"
     assert sound_key(MorseEvent("enter", "\n")) == "click"
     assert sound_key(MorseEvent("pop", ".")) == "click"
     assert sound_key(MorseEvent("backspace", "A")) == "click"

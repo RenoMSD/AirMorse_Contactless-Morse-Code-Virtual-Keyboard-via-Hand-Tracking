@@ -68,7 +68,8 @@ class MorseEvent:
     symbol: a dot or dash was stored.
     char: a letter or digit was committed.
     space: a space was committed.
-    enter: a newline was committed.
+    newline: a line break was committed; the cursor moves down without submitting.
+    enter: the Enter key was committed; chat apps submit the message.
     backspace: a committed character should be deleted.
     pop: an uncommitted dot or dash was removed.
     error: the buffer was not in the dictionary and was discarded.
@@ -155,7 +156,7 @@ class MorseEngine:
             return []
         if sequence == NEWLINE_CODE:
             self.preview += "\n"
-            return [MorseEvent("enter", "\n")]
+            return [MorseEvent("newline", "\n")]
         character = MORSE.get(sequence)
         if character is None:
             return [MorseEvent("error", sequence)]
@@ -168,7 +169,7 @@ class MorseEngine:
         events: list[MorseEvent] = []
         if self.buffer:
             events.extend(self._commit())
-            if events and events[-1].kind in {"error", "enter"}:
+            if events and events[-1].kind in {"error", "newline"}:
                 return events
         self.preview += " "
         events.append(MorseEvent("space", " "))
@@ -178,7 +179,7 @@ class MorseEngine:
         events: list[MorseEvent] = []
         if self.buffer:
             events.extend(self._commit())
-            if events and events[-1].kind in {"error", "enter"}:
+            if events and events[-1].kind == "error":
                 return events
         self.preview += "\n"
         events.append(MorseEvent("enter", "\n"))
